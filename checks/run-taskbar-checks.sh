@@ -2,8 +2,14 @@
 set -euo pipefail
 mkdir -p screenshots
 collect() {
-  for name in vista-taskbar-two-rows vista-taskbar-two-rows-landscape vista-taskbar-two-rows-start vista-taskbar-failure fidelity-failure; do
-    timeout -k 2s 5s adb exec-out run-as com.nthexperience.desktop cat "files/$name.png" > "screenshots/$name.png" 2>/dev/null || true
+  for name in vista-taskbar-two-rows vista-taskbar-two-rows-landscape vista-taskbar-two-rows-start vista-taskbar-controls-bottom vista-taskbar-controls-bottom-landscape vista-taskbar-failure fidelity-failure; do
+    capture=$(mktemp)
+    timeout -k 2s 5s adb exec-out run-as com.nthexperience.desktop cat "files/$name.png" > "$capture" 2>/dev/null || true
+    if python3 -c 'import pathlib,sys;sys.exit(pathlib.Path(sys.argv[1]).read_bytes()[:8] != bytes([137,80,78,71,13,10,26,10]))' "$capture"; then
+      mv "$capture" "screenshots/$name.png"
+    else
+      rm -f "$capture"
+    fi
   done
   adb exec-out run-as com.nthexperience.desktop cat files/vista-taskbar-tree.txt > screenshots/vista-taskbar-tree.txt 2>/dev/null || true
   adb logcat -d -t 500 > screenshots/logcat.txt || true

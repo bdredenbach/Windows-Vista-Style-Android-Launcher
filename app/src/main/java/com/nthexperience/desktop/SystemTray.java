@@ -47,9 +47,11 @@ final class SystemTray extends LinearLayout {
         addView(taskManager, new LayoutParams(dp(44), dp(48)));
         compactStatus=Aero.text(c,"⌃",21,Color.WHITE);compactStatus.setGravity(Gravity.CENTER);compactStatus.setContentDescription("Device controls");compactStatus.setFocusable(true);compactStatus.setBackground(Aero.selection(c));compactStatus.setOnClickListener(v->{expanded=!expanded;prefs.edit().putBoolean("tray_expanded",expanded).apply();updateIconVisibility();host.layout();});compactStatus.setOnLongClickListener(v->{show("controls");return true;});addView(compactStatus,0,new LayoutParams(dp(44),dp(48)));updateIconVisibility();
     }
-    void fitWidth(int workspaceWidth) {
-        // Leave room for Start, the clock, and part of the scrolling task strip.
-        int width = Math.min(dp(44), Math.max(dp(24), (workspaceWidth - dp(150)) / getChildCount()));
+    void fitWidth(int workspaceWidth) {fitWidth(workspaceWidth,false);}
+    void fitWidth(int workspaceWidth,boolean separateAppRow) {
+        // The expanded bottom row also reserves a Quick Launch overflow button.
+        int reserved=dp(separateAppRow?190:150);
+        int width = Math.min(dp(44), Math.max(dp(24), (workspaceWidth - reserved) / getChildCount()));
         for (int i = 0; i < getChildCount(); i++) {
             View child = getChildAt(i);
             int childWidth = !expanded && child == compactStatus ? dp(44) : width;
