@@ -26,6 +26,7 @@ final class DesktopContextMenu {
         gutter.addView(image,new FrameLayout.LayoutParams(dp(20),dp(20),Gravity.CENTER));row.addView(gutter,new LinearLayout.LayoutParams(dp(31),-1));
         TextView label=Aero.text(context,title,13,0xff151a1f);label.setPadding(dp(9),0,dp(12),0);row.addView(label,new LinearLayout.LayoutParams(0,-1,1));row.setEnabled(enabled);row.setAlpha(enabled?1:.42f);row.setOnClickListener(v->{if(enabled){dismiss();action.run();}});items.addView(row,new LinearLayout.LayoutParams(-1,dp(36)));
     }
+    void checked(String title,boolean selected,Runnable action){item((selected?"✓  ":"")+title,"empty",action);}
     void separator(){LinearLayout row=new LinearLayout(context);row.setPadding(dp(34),dp(3),dp(5),dp(3));View line=new View(context);line.setBackgroundColor(0xffc6cbcf);row.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));items.addView(row,new LinearLayout.LayoutParams(-1,dp(7)));}
     void show(View root,float screenX,float screenY,int leftInset,int topInset,int rightInset,int bottomInset){
         int[] location=new int[2];root.getLocationOnScreen(location);int left=location[0]+leftInset+dp(3),top=location[1]+topInset+dp(3),right=location[0]+root.getWidth()-rightInset-dp(3),bottom=location[1]+root.getHeight()-bottomInset-dp(3);

@@ -19,6 +19,9 @@ final class AeroIcon extends View {
             p.setColor(0xaaffffff); p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(1); canvas.drawCircle(32,32,28,p); p.setStyle(Paint.Style.FILL);
             p.setColor(0x55ffffff); canvas.drawOval(13,8,51,28,p);
             p.setColor(Color.WHITE); p.setTypeface(Typeface.create("sans-serif",Typeface.BOLD)); p.setTextSize(34); canvas.drawText("N",20,46,p);
+        } else if(kind.equals("taskmanager")) {
+            rounded(canvas,7,9,57,48,3,0xffd0d9df,0xff71828f);rounded(canvas,11,13,53,43,1,0xff173c25,0xff071a0b);
+            p.setColor(0xff57e86c);p.setStrokeWidth(2);canvas.drawLine(13,34,23,34,p);canvas.drawLine(23,34,28,19,p);canvas.drawLine(28,19,35,38,p);canvas.drawLine(35,38,40,28,p);canvas.drawLine(40,28,51,28,p);p.setColor(0xff9aa8b3);canvas.drawRect(28,48,36,53,p);rounded(canvas,20,53,44,57,2,0xffd0d9df,0xff71828f);
         } else if (kind.equals("computer")) {
             rounded(canvas,7,9,57,45,4,0xffc5d9e2,0xff7297ab);
             rounded(canvas,11,13,53,39,1,0xff4bb7ce,0xff133d6b);
