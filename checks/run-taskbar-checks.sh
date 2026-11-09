@@ -17,5 +17,7 @@ grep -q 'PASS:' extended-taskbar-test.txt
 collect
 adb shell am force-stop com.nthexperience.desktop
 adb shell pm clear com.nthexperience.desktop
+# The existing fidelity suite reads isolated real storage fixtures, as in the full runner.
+adb shell appops set --uid com.nthexperience.desktop MANAGE_EXTERNAL_STORAGE allow
 timeout -k 3s 240s adb shell am instrument -w com.nthexperience.desktop.test/com.nthexperience.desktop.FidelitySmoke | tee fidelity-test.txt
 grep -q 'PASS:' fidelity-test.txt
