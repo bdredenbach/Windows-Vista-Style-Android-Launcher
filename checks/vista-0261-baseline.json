@@ -132,12 +132,12 @@
       "reason": "Reuse parsed shortcut and folder names; invalidate on saved data changes."
     },
     "app/src/main/java/com/nthexperience/desktop/StartMenu.java": {
-      "sha256": "a2822f07b702fc87789f5936890ec91c80e56e47c9a939115c465005654a74a4",
-      "reason": "Expose the existing Welcome Center with its own Start menu label."
+      "sha256": "fbe1a6317a6047ca8edb9167952e5db7d4974908d8c1ca3258c857a95917ae5f",
+      "reason": "Preserve Start styling while exposing direct uninstall/context-click app actions."
     },
     "app/src/main/AndroidManifest.xml": {
-      "sha256": "cb28da6c3280d2c973881399bf678752865012ef82701e89be692dfaf2b36f1f",
-      "reason": "Register opt-in phone notification access for the requested initialization step."
+      "sha256": "f2f7754baca9f0e52a3fc4d24cfb695ac99cbac15b327c5be62b8d371795a999",
+      "reason": "Declare foreground precise/coarse location and native uninstall requests, retaining notification access."
     },
     "app/src/main/java/com/nthexperience/desktop/StartupExperience.java": {
       "sha256": "dfd69394fadac02cd8de3e6dc9eb6a0ea102ce70ad29f6f3af4a2d0e83f5054b",
@@ -146,6 +146,14 @@
     "app/src/main/java/com/nthexperience/desktop/SystemTray.java": {
       "sha256": "fd548f1c720ab0753547b4d64da3bd41ce8a77f27ba94196d27bc1bdc732e659",
       "reason": "Show phone notifications in the existing classic tray controls without changing taskbar geometry."
+    },
+    "app/src/main/java/com/nthexperience/desktop/ShortcutMenus.java": {
+      "sha256": "b080ec830ce1e41f71c3d9558982568b1c3943fc771c777954be884f17982549",
+      "reason": "Add a distinct native Android uninstall action for eligible installed apps."
+    },
+    "app/src/main/java/com/nthexperience/desktop/WeatherLocation.java": {
+      "sha256": "892ec0c206e9e1a6d730519b103da06809972b28e7c32fce9a22367491c7c4a5",
+      "reason": "Accept approximate grants and use precise/GPS access only when granted."
     }
   },
   "approved_shell_changes": {
