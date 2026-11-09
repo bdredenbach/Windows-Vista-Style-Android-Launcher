@@ -46,6 +46,7 @@ jobs:
           cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" build/signing-tool/
           cp "$ANDROID_HOME/build-tools/35.0.0/aapt" build/signing-tool/
           cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" build/signing-tool/
+          cp -r "$ANDROID_HOME/build-tools/35.0.0/lib64" build/signing-tool/
       - uses: actions/upload-artifact@v4
         if: matrix.api == 30
         with:

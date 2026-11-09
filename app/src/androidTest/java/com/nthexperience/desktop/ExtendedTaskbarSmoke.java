@@ -23,6 +23,8 @@ public final class ExtendedTaskbarSmoke extends Instrumentation {
         store=new DesktopStore(getTargetContext());store.prefs.edit().clear().putInt("startup_mode",2).putBoolean("welcome_on_start",false).putBoolean("reduce_motion",true).putBoolean("sidebar_visible",false).putBoolean("tray_expanded",false).putString("taskbar_grouping","Never").putInt("desktop_rows_portrait",8).putInt("desktop_columns_portrait",4).putInt("desktop_rows_landscape",4).putInt("desktop_columns_landscape",8).commit();
         getTargetContext().getSharedPreferences(StorageAccess.PREFS,0).edit().putBoolean("seen",true).commit();getTargetContext().getSharedPreferences(StartupExperience.SESSION,0).edit().putBoolean("seen",true).putBoolean("welcome_seen",true).putBoolean(StartupExperience.HOME_OFFERED,true).commit();
         store.usagePrefs.edit().putBoolean(DesktopStore.TASKBAR_USAGE,false).commit();
+        // This suite exercises a configured desktop; setup dialogs have their own unit suite.
+        getTargetContext().getSharedPreferences(InitializationState.PREFS,0).edit().clear().putInt("flow_version",2).putInt("step",InitializationState.Step.DONE.ordinal()).commit();
         home=(MainActivity)startActivitySync(new Intent(Intent.ACTION_MAIN).setComponent(new ComponentName(getTargetContext(),MainActivity.class)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));root=home.getWindow().getDecorView();await(()->home.hasWindowFocus(),"Desktop focus");
         await(()->find(v->v instanceof DesktopIconGrid)!=null&&((DesktopIconGrid)find(v->v instanceof DesktopIconGrid)).getChildCount()>0,"Desktop ready");
         ui(()->home.open("@notes"));
@@ -33,8 +35,8 @@ public final class ExtendedTaskbarSmoke extends Instrumentation {
                 if(!snap)ui(()->{DesktopIconGrid grid=grid();grid.place(String.valueOf(grid.getChildAt(0).getTag()),37,79);});idle();
                 Map<String,Rect> before=icons();String saved=store.prefs.getString(orientation==ActivityInfo.SCREEN_ORIENTATION_PORTRAIT?"desktop_positions_portrait":"desktop_positions_landscape","{}");int oldHeight=barView().getHeight();
                 for(int repeat=0;repeat<2;repeat++){
-                    bar("Expand taskbar");await(()->barView().getHeight()==oldHeight+Aero.dp(home,48),"Extra row has exact height");idle();check(before.equals(icons()),"Every desktop icon keeps its pixel bounds after expansion");check(saved.equals(store.prefs.getString(orientation==ActivityInfo.SCREEN_ORIENTATION_PORTRAIT?"desktop_positions_portrait":"desktop_positions_landscape","{}")),"Expansion never rewrites icon positions");
-                    assertRows();if(snap&&repeat==0)trayIsolation(orientation);check(((ScrollView)grid().getParent()).canScrollVertically(1),"Desktop area covered by extra row is scrollable");if(snap&&orientation==ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE&&repeat==0)shot("vista-taskbar-two-rows-landscape.png");
+                    bar("Expand taskbar");await(()->barView().getHeight()==oldHeight+Aero.dp(home,48),"Extra row has exact height");idle();assertIconLabelsFit();Map<String,Rect> fitted=icons();idle();check(fitted.equals(icons()),"Unchanged expanded viewport keeps fitted icon bounds stable");check(saved.equals(store.prefs.getString(orientation==ActivityInfo.SCREEN_ORIENTATION_PORTRAIT?"desktop_positions_portrait":"desktop_positions_landscape","{}")),"Expansion never rewrites icon positions");
+                    assertRows();if(snap&&repeat==0)trayIsolation(orientation);if(snap&&orientation==ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE&&repeat==0)shot("vista-taskbar-two-rows-landscape.png");
                     bar("Expand taskbar");await(()->barView().getHeight()==oldHeight,"Normal height restored");idle();check(before.equals(icons()),"Collapse keeps every desktop icon fixed");
                 }
             }
@@ -50,10 +52,19 @@ public final class ExtendedTaskbarSmoke extends Instrumentation {
         check(Boolean.TRUE.equals(DesktopBackup.parse(DesktopBackup.snapshot(store).toString()).values.get("taskbar_expanded")),"Backup preserves expanded setting");
         List<String> order=tasks();shot("vista-taskbar-two-rows.png");resumed.clear();MainActivity old=home;ui(home::recreate);MainActivity next=null;long until=SystemClock.uptimeMillis()+12000;while(SystemClock.uptimeMillis()<until){MainActivity a=resumed.poll(300,TimeUnit.MILLISECONDS);if(a!=null&&a!=old){next=a;break;}}check(next!=null,"Activity recreation completed");home=next;root=home.getWindow().getDecorView();await(()->home.hasWindowFocus()&&tasks().equals(order),"Activity recreation restores task order: expected "+order+"; currently "+tasks());assertRows();
         idle();tap(find(v->"Start menu".equals(v.getContentDescription())),60);await(()->find(v->v instanceof StartMenu)!=null,"Start menu opens above expanded taskbar");shot("vista-taskbar-two-rows-start.png");tap(find(v->"Start menu".equals(v.getContentDescription())),60);await(()->find(v->v instanceof StartMenu)==null,"Start menu closes above expanded taskbar");
-        result.putString("stream","PASS: two taskbar controls; repeated expansion/collapse with fixed pixel icon geometry in portrait/landscape and snapped/free layouts; stable insertion after external tasks; open apps across the upper row; Start, Quick Launch, clock and tray across the lower row; tray expansion preserves app bounds; Static fitting and Scrollable overflow; backup and Activity recreation; Start menu.\n");success=true;
+        result.putString("stream","PASS: two taskbar controls; repeated expansion/collapse with complete visible icon rows and label clearance in portrait/landscape and snapped/free layouts; temporary fitting preserves saved positions and collapse restores pixel bounds; stable insertion after external tasks; open apps across the upper row; Start, Quick Launch, clock and tray across the lower row; tray expansion preserves app bounds; Static fitting and Scrollable overflow; backup and Activity recreation; Start menu.\n");success=true;
     }catch(Throwable failure){try{shot("vista-taskbar-failure.png");StringBuilder tree=new StringBuilder();dump(getUiAutomation().getRootInActiveWindow(),tree,0);try(FileOutputStream out=getTargetContext().openFileOutput("vista-taskbar-tree.txt",0)){out.write(tree.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));}}catch(Exception ignored){}StringWriter text=new StringWriter();failure.printStackTrace(new PrintWriter(text));result.putString("stream","FAIL: "+text);
     }finally{app.unregisterActivityLifecycleCallbacks(lifecycle);}finish(success?Activity.RESULT_OK:Activity.RESULT_CANCELED,result);}
     private Rect screen(View view){int[] at=new int[2];view.getLocationOnScreen(at);return new Rect(at[0],at[1],at[0]+view.getWidth(),at[1]+view.getHeight());}
+    private void assertIconLabelsFit(){
+        DesktopIconGrid grid=grid();int visible=grid.viewportHeight();boolean overflow=false;
+        for(int i=0;i<grid.getChildCount();i++){
+            View child=grid.getChildAt(i);if(child.getTop()>=visible){overflow=true;continue;}
+            check(child.getBottom()<=visible,"Every visible icon cell fits above the expanded taskbar: "+child.getTag());
+            if(child instanceof LinearLayout){LinearLayout tile=(LinearLayout)child;for(int j=0;j<tile.getChildCount();j++)if(tile.getChildAt(j) instanceof TextView){TextView label=(TextView)tile.getChildAt(j);if(label.getVisibility()==View.GONE)continue;check(label.getBottom()+tile.getPaddingBottom()<=tile.getHeight(),"Measured label fits its icon cell: "+child.getTag());if(label.getLayout()!=null){int last=label.getLayout().getLineCount()-1;check(last<0||label.getLayout().getLineBottom(last)<=label.getHeight()-label.getPaddingTop()-label.getPaddingBottom(),"Final label line is not clipped: "+child.getTag());}}}
+        }
+        check(!overflow||((ScrollView)grid.getParent()).canScrollVertically(1),"Overflow icon rows remain scrollable");
+    }
     private void assertRows(){
         Rect bar=screen(barView()),apps=screen(strip());int row=Aero.dp(home,48);
         check(strip().getHeight()==row&&apps.top==bar.top,"Open apps occupy one upper row");
