@@ -64,6 +64,7 @@ public final class MainActivity extends Activity implements StartMenu.Actions,Ga
     private int desktopRows,desktopCutoutLeft,desktopCutoutRight,windowTopInset;
     private WeatherLocation weatherLocation;
     private LinearLayout shell,taskbar;private VistaTaskbarItems taskItems;private View taskClip;
+    private boolean restoringTaskbarOrder;
     private final List<String> liveTaskbarOrder=new ArrayList<>();private HorizontalScrollView taskStrip;private int taskViewportWidth;
     private StartMenu startMenu;
     private SystemTray tray;private WindowPreviews previews;private BrightnessControl brightness;
@@ -335,8 +336,10 @@ public final class MainActivity extends Activity implements StartMenu.Actions,Ga
     private void orderTaskButtons(int first){
         Map<String,View> live=new LinkedHashMap<>();
         for(int i=first;i<taskItems.getChildCount();i++){View button=taskItems.getChildAt(i);live.put((String)button.getTag(),button);}
-        liveTaskbarOrder.retainAll(live.keySet());for(String id:live.keySet())if(!liveTaskbarOrder.contains(id))liveTaskbarOrder.add(id);
-        taskItems.removeViews(first,taskItems.getChildCount()-first);for(String id:liveTaskbarOrder){View button=live.get(id);taskItems.addView(button,button.getLayoutParams());}
+        // App discovery is asynchronous after recreation. Keep session task positions
+        // until their catalog entries are ready, including temporarily hidden Android buttons.
+        List<String> external=ExternalTasks.list();if(!restoringTaskbarOrder)liveTaskbarOrder.removeIf(id->!live.containsKey(id)&&!external.contains(id));for(String id:live.keySet())if(!liveTaskbarOrder.contains(id))liveTaskbarOrder.add(id);
+        taskItems.removeViews(first,taskItems.getChildCount()-first);for(String id:liveTaskbarOrder){View button=live.get(id);if(button!=null)taskItems.addView(button,button.getLayoutParams());}
     }
     private int sidebarInset(){return sidebar!=null&&sidebar.getVisibility()==View.VISIBLE&&store.prefs.getBoolean("sidebar_always_top",false)?sidebar.getWidth():0;}
     private LinearLayout taskButton(String id){return taskButton(id,label(id));}
@@ -998,15 +1001,18 @@ public final class MainActivity extends Activity implements StartMenu.Actions,Ga
         if(destroyed||saved==null)return;
         try{
             JSONObject session=new JSONObject(saved);JSONArray tools=session.optJSONArray("tools");
+            restoringTaskbarOrder=true;JSONArray order=session.optJSONArray("taskbarOrder");if(order!=null){liveTaskbarOrder.clear();for(int i=0;i<order.length();i++){String id=order.optString(i);if(!id.isEmpty()&&!liveTaskbarOrder.contains(id))liveTaskbarOrder.add(id);}}
             if(tools!=null)for(int i=0;i<tools.length();i++){
                 JSONObject item=tools.optJSONObject(i);if(item==null)continue;String id=item.optString("id");
                 if(!id.startsWith("@organizer:")&&!id.startsWith("folder:")&&!validExplorerId(id)&&!FolderLinks.id(id)&&!(id.startsWith("@gadget:")&&GadgetCatalog.extra(id.substring(8)))&&!Arrays.asList("@notes","@sticky","@calendar","@gadgets","@clock","@weather","@appearance","@computer","@control","@system","@files","@filemanagers","@organize","@quicklaunch","@backup","@welcome","@browser","@photos","@taskmanager","@recycle","@recent",MediaLibrary.PLAYER).contains(id)&&!store.isFolder(id))continue;
                 if(id.startsWith("@organizer:")||(id.startsWith("folder:")&&!store.isFolder(id)))organizer(id,"desktop");else open(id);DesktopWindow tool=windows.get(id);if(tool==null)continue;tool.readGeometry(item.optJSONObject("geometry"));tool.setVisibility(item.optBoolean("visible",true)?View.VISIBLE:View.GONE);ToolViewState.restore(tool,item.optJSONObject("ui"));
             }
             JSONArray hidden=session.optJSONArray("desktopHidden");if(hidden!=null)for(int i=0;i<hidden.length();i++){String id=hidden.optString(i);DesktopWindow tool=windows.get(id);if(tool!=null&&tool.getVisibility()!=View.VISIBLE)desktopHidden.put(id,tool);}
-            JSONArray order=session.optJSONArray("taskbarOrder");if(order!=null){liveTaskbarOrder.clear();for(int i=0;i<order.length();i++){String id=order.optString(i);if(!id.isEmpty()&&!liveTaskbarOrder.contains(id))liveTaskbarOrder.add(id);}}
+            // Window opens may be queued until their host is measured. Do not discard
+            // saved slots while that restore is still attaching its windows.
+            workspace.post(()->{restoringTaskbarOrder=false;renderTaskbar();});
             desktopScroll.post(()->desktopScroll.scrollTo(0,session.optInt("desktopScroll")));startMenu.restore(session.optJSONObject("start"));renderTaskbar();
-        }catch(JSONException ignored){}
+        }catch(JSONException ignored){restoringTaskbarOrder=false;}
     }
     @Override protected void onDestroy(){destroyed=true;if(playback!=null)playback.release();if(wallpaper!=null)wallpaper.close();if(previews!=null)previews.dismiss();DesktopSounds.stop();if(storageSetup!=null)storageSetup.close();if(usageGuide!=null)usageGuide.dismiss();if(weatherLocation!=null)weatherLocation.close();if(tray!=null)tray.stop();if(startup!=null)startup.close();main.removeCallbacksAndMessages(null);worker.shutdownNow();for(DesktopWindow tool:windows.values()){if(tool.body instanceof VistaShell)((VistaShell)tool.body).close();if(tool.body instanceof WeatherPanel)((WeatherPanel)tool.body).close();if(tool.body instanceof BrowserPanel)((BrowserPanel)tool.body).close();if(tool.body instanceof PhotoGallery)((PhotoGallery)tool.body).close();if(tool.body instanceof TaskManagerPanel)((TaskManagerPanel)tool.body).close();if(tool.body instanceof RecyclePanel)((RecyclePanel)tool.body).close();}if(sidebar!=null)sidebar.close();if(weatherLocation!=null)weatherLocation.pause();if(receiverRegistered){unregisterReceiver(packages);unregisterReceiver(timeChanged);}if(Build.VERSION.SDK_INT>=33&&backCallback!=null)getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(backCallback);super.onDestroy();}
 
