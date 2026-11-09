@@ -73,8 +73,8 @@ public final class MainActivity extends Activity implements StartMenu.Actions,Ga
     private boolean destroyed,scanPending,scanAgain,receiverRegistered;
     private int scanGeneration,columns;
     private OnBackInvokedCallback backCallback;
-    private final BroadcastReceiver packages=new BroadcastReceiver(){@Override public void onReceive(Context c,Intent i){scanApps();}};
-    private final BroadcastReceiver timeChanged=new BroadcastReceiver(){@Override public void onReceive(Context c,Intent i){updateClock();}};
+    private final BroadcastReceiver packages=new BroadcastReceiver(){@Override public void onReceive(Context c,Intent i){DesktopCache.invalidate();scanApps();}};
+    private final BroadcastReceiver timeChanged=new BroadcastReceiver(){@Override public void onReceive(Context c,Intent i){updateClock();if(Intent.ACTION_LOCALE_CHANGED.equals(i.getAction())){DesktopCache.invalidate();scanApps();}}};
     private final Runnable taskbarRender=()->{if(!destroyed)renderTaskbar();};
     private final Runnable desktopRender=()->{if(!destroyed)renderDesktop();};
     private final Runnable clockTick=new Runnable(){public void run(){updateClock();main.postDelayed(this,60000-System.currentTimeMillis()%60000);}};
@@ -185,9 +185,11 @@ public final class MainActivity extends Activity implements StartMenu.Actions,Ga
         if(destroyed)return;if(scanPending){scanAgain=true;return;}scanPending=true;int generation=++scanGeneration;
         worker.execute(()->{
             List<AppCatalog.Entry> apps;
-            try{apps=AppCatalog.load(getApplicationContext());}catch(RuntimeException e){apps=new ArrayList<>();}
-            List<AppCatalog.Entry> result=apps;ExternalTasks.refresh(getApplicationContext(),store,result);
-            main.post(()->{if(destroyed||restoringBackup||generation!=scanGeneration)return;scanPending=false;entries.clear();for(AppCatalog.Entry e:result)entries.put(e.id,e);startMenu.entries(result);renderDesktop();renderTaskbar();for(DesktopWindow tool:windows.values())if(tool.getParent()!=null&&tool.body instanceof VistaShell)((VistaShell)tool.body).refreshApps();if(scanAgain){scanAgain=false;scanApps();}});
+            List<AppCatalog.Entry> cached=DesktopCache.read(getApplicationContext());
+            if(cached!=null)main.post(()->{if(destroyed||restoringBackup||generation!=scanGeneration||!entries.isEmpty())return;for(AppCatalog.Entry e:cached)entries.put(e.id,e);startMenu.entries(cached);renderDesktop();renderTaskbar();});
+            apps=DesktopCache.load(getApplicationContext());
+            List<AppCatalog.Entry> result=apps;if(result!=null)ExternalTasks.refresh(getApplicationContext(),store,result);
+            main.post(()->{if(destroyed||restoringBackup||generation!=scanGeneration)return;scanPending=false;if(result==null){if(scanAgain){scanAgain=false;scanApps();}return;}entries.clear();for(AppCatalog.Entry e:result)entries.put(e.id,e);startMenu.entries(result);renderDesktop();renderTaskbar();for(DesktopWindow tool:windows.values())if(tool.getParent()!=null&&tool.body instanceof VistaShell)((VistaShell)tool.body).refreshApps();if(scanAgain){scanAgain=false;scanApps();}});
         });
     }
     int desktopGridWidth(){return desktop==null?0:desktop.getWidth();}
@@ -438,7 +440,7 @@ public final class MainActivity extends Activity implements StartMenu.Actions,Ga
     private void desktopOptions(float x,float y){
         if(desktopMenu!=null)desktopMenu.dismiss();startMenu.hide();desktopMenu=new DesktopContextMenu(this);
         desktopMenu.item("View  ›","appearance",()->desktopViewMenu(x,y));desktopMenu.item("Sort by  ›","programs",()->desktopSortMenu(x,y));desktopMenu.item("New folder","folderapps",()->organizer("@organize","new"));desktopMenu.item("Paste","paste",!ExplorerClipboard.shortcuts.isEmpty(),()->{try{ExplorerClipboard.paste(store,"desktop");desktopChanged();}catch(IllegalArgumentException ex){toast(ex.getMessage());}});desktopMenu.separator();
-        desktopMenu.item("All programs","programs",()->showStart(false));desktopMenu.item("Refresh","refresh",()->{scanApps();sidebar.refresh();});desktopMenu.separator();
+        desktopMenu.item("All programs","programs",()->showStart(false));desktopMenu.item("Refresh","refresh",()->{DesktopCache.invalidate();scanApps();sidebar.refresh();});desktopMenu.separator();
         desktopMenu.item("Computer","computer",this::computer);desktopMenu.item("Control Panel","control",()->open("@control"));desktopMenu.item("Show Sidebar","gadgets",()->vistaAction("sidebar-show"));desktopMenu.separator();
         desktopMenu.item("Recycle Bin","delete",()->open("@recycle"));desktopMenu.item("Saved Workspaces…","computer",this::showWorkspaces);desktopMenu.item("Manage desktop shortcuts","computer",this::manageShortcuts);desktopMenu.item("Personalize","appearance",this::appearance);
         if(!isHome()){desktopMenu.separator();desktopMenu.item("Make default home","orb",this::home);}
