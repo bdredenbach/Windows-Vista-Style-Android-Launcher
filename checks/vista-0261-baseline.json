@@ -113,5 +113,33 @@
     "icon": "3d1ea2e0fb0b94673275c46d5d72d5f71ad7b6ea37b19264f6a6dd114cb11ad0",
     "defaultLabel": "cc9961e62734e71e22be8e9574e117db35b264b3f85395a931b0a31ec1284563",
     "taskManager": "be3e445198a7a8069b566c94c742cbe89449cc99e48a86840a441f195968009f"
+  },
+  "approved_runtime_changes": {
+    "app/src/main/java/com/nthexperience/desktop/AeroIcon.java": {
+      "sha256": "36d44f0d9de5fa066d5f3632be151bff10a2af43cac2b65389ed02175ac3053b",
+      "reason": "Cache static artwork without changing its drawing implementation."
+    },
+    "app/src/main/java/com/nthexperience/desktop/DesktopIconGrid.java": {
+      "sha256": "99490e99f3dad14385e351efffb3cbf17e87aafb69ca1d4600abcce18efa8e72",
+      "reason": "Fit labels above extended taskbars and reuse unchanged placement plans."
+    },
+    "app/src/main/java/com/nthexperience/desktop/DesktopMetrics.java": {
+      "sha256": "c03c088b0f7e4ffa6c05088bfa3a067ecfa239a2d9150a2d9d973e40fa3ee68e",
+      "reason": "Fit complete icon rows to the usable taskbar viewport."
+    },
+    "app/src/main/java/com/nthexperience/desktop/DesktopStore.java": {
+      "sha256": "99a4bf0cce9a9cb103160f19c7c69ba1ffddc0425b978393a2a69abddaf3c71b",
+      "reason": "Reuse parsed shortcut and folder names; invalidate on saved data changes."
+    },
+    "app/src/main/java/com/nthexperience/desktop/StartMenu.java": {
+      "sha256": "a2822f07b702fc87789f5936890ec91c80e56e47c9a939115c465005654a74a4",
+      "reason": "Expose the existing Welcome Center with its own Start menu label."
+    }
+  },
+  "approved_shell_changes": {
+    "layoutWorkspace": {
+      "sha256": "4df3371cd8e6193591f680ebd62591d3edbf0711672aa2539afb6c3e2684ce63",
+      "reason": "Use the actual taskbar viewport to fit complete icon rows; preserve saved coordinates."
+    }
   }
 }
