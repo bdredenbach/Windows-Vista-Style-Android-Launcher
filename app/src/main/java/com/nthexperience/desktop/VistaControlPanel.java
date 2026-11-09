@@ -13,7 +13,7 @@ final class VistaControlPanel extends VistaShell {
     static void searchItems(String query,List<StartSearch.Result> out){for(ControlPanelCatalog.Hit hit:ControlPanelCatalog.search(query))out.add(new StartSearch.Result("setting:"+hit.destination,hit.title,"Control Panel",hit.owner.icon,null,false));}
     private final AeroWallpaper wallpaper;
     private JSONObject backgroundDraft=new JSONObject();private boolean classic;private final LinearLayout crumbs;private int layoutSignature=-1;
-    private CheckBox usageCheckbox;
+    private CheckBox usageCheckbox,expandedCheckbox;
     private View usageHelp;
     private EditText nameInput;private String nameDraft;
     VistaControlPanel(Context c,DesktopStore store,AeroWallpaper wallpaper,Actions actions,String initial){
@@ -29,7 +29,7 @@ final class VistaControlPanel extends VistaShell {
     private void selectView(boolean value){boolean same=page().equals("home")&&query().isEmpty();classic=value;store.prefs.edit().putBoolean("control_panel_classic",value).apply();navigate("home");if(same)render();}
     private void selectCategory(String key){classic=false;store.prefs.edit().putBoolean("control_panel_classic",false).apply();navigate("category:"+key);}
     @Override void render(){
-        usageCheckbox=null;usageHelp=null;
+        usageCheckbox=null;usageHelp=null;expandedCheckbox=null;
         if(nameInput!=null)nameDraft=nameInput.getText().toString();nameInput=null;renderPane();LinearLayout column=column();String page=page();updateAddress();status.setText("Nth Desktop  •  "+title(page));
         if(!query().isEmpty())searchResults(column);
         else if(page.equals("home")){panelHeading(column,"Adjust your computer's settings");if(classic)classicView(column);else categoryHome(column);}
@@ -42,6 +42,7 @@ final class VistaControlPanel extends VistaShell {
             case "sounds":heading(column,"Desktop sound effects","Choose the cues you want to hear.");DesktopSounds.settings(getContext(),column);break;
             case "startup":startup(column);break;
             case "taskbar":heading(column,"Taskbar and Start Menu","Choose how your taskbar and Start menu behave.");
+                expandedCheckbox=checkbox("Expand taskbar to two rows",store.prefs.getBoolean("taskbar_expanded",false));expandedCheckbox.setOnClickListener(v->{store.prefs.edit().putBoolean("taskbar_expanded",expandedCheckbox.isChecked()).apply();actions.action("taskbar-refresh");});column.addView(expandedCheckbox);
                 taskRow(column,"Taskbar grouping","Never, when full, or always group folder windows","files","page:grouping");check(column,"Show mouse-hover window previews","taskbar_previews",true,()->actions.action("taskbar-refresh"));check(column,"Show Android status bar","show_status_bar",false,()->actions.action("chrome"));check(column,"Show Android app taskbar buttons","taskbar_apps",true,()->actions.action("taskbar-refresh"));taskbarUsage(column);taskRow(column,"Quick Launch","Choose and order taskbar shortcuts","programs","open:@quicklaunch");taskRow(column,"Choose default home app","Use Nth Desktop as your home","control","home");break;
             case "sidebar":heading(column,"Windows Sidebar Properties","Gadgets on your desktop");check(column,"Keep Sidebar above windows","sidebar_always_top",false,()->actions.action("sidebar-apply"));taskRow(column,"Show Sidebar","Restore the gadget bar without changing its contents","gadgets","sidebar-show");taskRow(column,"Close Sidebar","Hide the dock; keep gadgets and their data","close","sidebar-hide");taskRow(column,"Add gadgets…","Open Gadget Gallery","gadgets","open:@gadgets");break;
             case "icons":heading(column,"Desktop Settings","Choose your icon layout, grid and desktop shortcuts.");column.addView(new DesktopSettings(getContext(),store,()->actions.action("desktop")),new LayoutParams(-1,-2));section(column,"Built-in desktop icons");String[][] icons={{"@recycle","Recycle Bin"},{"@computer","Computer"},{"@files","Files"},{"@notes","Notepad"},{"@photos","Photo Gallery"},{"@appearance","Personalize"},{"@control","Control Panel"},{"@filemanagers","File Managers"}};for(String[] icon:icons){CheckBox box=checkbox(icon[1],store.pinned(icon[0]));box.setOnCheckedChangeListener((v,value)->{if(value!=store.pinned(icon[0]))store.toggle(icon[0]);actions.action("desktop");});column.addView(box);}link(column,"Manage all desktop shortcuts",()->actions.action("shortcuts"));link(column,"Restore original desktop icons",()->actions.action("reset-icons"));break;
@@ -52,6 +53,7 @@ final class VistaControlPanel extends VistaShell {
         }
         if(compact()&&query().isEmpty())relatedFooter(column);body(scrolling(column));
     }
+    void refreshTaskbarExpansion(){if(expandedCheckbox!=null)expandedCheckbox.setChecked(store.prefs.getBoolean("taskbar_expanded",false));}
     private void panelHeading(LinearLayout parent,String title){TextView text=Aero.text(getContext(),title,17,0xff003399);text.setPadding(0,dp(5),0,dp(18));parent.addView(text);}
     private String iconFor(String destination,String fallback){switch(destination){case "page:colors":return "color";case "page:background":return "pictures";case "page:startup":return "sound";default:return fallback;}}
     private void destination(String value){if(value.startsWith("page:"))navigate(value.substring(5));else if(value.startsWith("open:"))actions.open(value.substring(5));else actions.action(value);}
