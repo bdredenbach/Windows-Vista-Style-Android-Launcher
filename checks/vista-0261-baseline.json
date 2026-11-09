@@ -134,6 +134,18 @@
     "app/src/main/java/com/nthexperience/desktop/StartMenu.java": {
       "sha256": "a2822f07b702fc87789f5936890ec91c80e56e47c9a939115c465005654a74a4",
       "reason": "Expose the existing Welcome Center with its own Start menu label."
+    },
+    "app/src/main/AndroidManifest.xml": {
+      "sha256": "cb28da6c3280d2c973881399bf678752865012ef82701e89be692dfaf2b36f1f",
+      "reason": "Register opt-in phone notification access for the requested initialization step."
+    },
+    "app/src/main/java/com/nthexperience/desktop/StartupExperience.java": {
+      "sha256": "dfd69394fadac02cd8de3e6dc9eb6a0ea102ce70ad29f6f3af4a2d0e83f5054b",
+      "reason": "Run the six requested initialization steps before the existing Welcome/start surface."
+    },
+    "app/src/main/java/com/nthexperience/desktop/SystemTray.java": {
+      "sha256": "fd548f1c720ab0753547b4d64da3bd41ce8a77f27ba94196d27bc1bdc732e659",
+      "reason": "Show phone notifications in the existing classic tray controls without changing taskbar geometry."
     }
   },
   "approved_shell_changes": {

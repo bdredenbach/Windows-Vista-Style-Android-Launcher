@@ -13,7 +13,7 @@ The 0.26.1 backup schema is kept, including expanded taskbar, icon/grid, folder 
 
 ## Validation
 
-`python checks/CheckVistaBaseline.py` retains the original 0.26.1 hashes and verifies the unchanged identity, 97 existing runtime files, seven existing shell methods and every original icon artwork command. Explicitly pinned requested changes cover static icon caching, parsed model caching, label/grid geometry and work-area sizing; the original hashes remain in the manifest for review. In addition, the unit suite checks five source-family fixtures, unsupported items, background names, corruption rejection, restore/undo, existing expanded-taskbar preferences, cached icons, cold scan failure and Task Manager navigation.
+`python checks/CheckVistaBaseline.py` retains the original 0.26.1 hashes and verifies the unchanged identity, 94 existing runtime files, seven existing shell methods and every original icon artwork command. Explicitly pinned requested changes cover static icon caching, parsed model caching, label/grid geometry and work-area sizing; the original hashes remain in the manifest for review. In addition, the unit suite checks five source-family fixtures, unsupported items, background names, corruption rejection, restore/undo, existing expanded-taskbar preferences, cached icons, cold scan failure and Task Manager navigation.
 
 Build and test with Java 17 / Android SDK 36:
 
@@ -32,3 +32,24 @@ All five variants now share static built-in artwork in a bounded 4 MiB bitmap ca
 `LauncherRenderingTest` checks expanded taskbars with automatic/requested rows, two-line labels, larger system text, whole overflow rows, temporary saved-position fitting, geometry invalidation, mutable model safety, static icon reuse and bounded cache size. Phone/emulator timing and visual checks remain pending; the APKs are development-signed test builds.
 
 Vista Start now has an explicit **Welcome Center** navigation item targeting the existing center. Its restore action remains **Restore a desktop**; startup preferences are preserved. `WelcomeNavigationTest` exercises the actual Start action.
+
+## Ordered initialization and restored folders
+
+After the existing startup introduction, all five desktops use the same device-local setup sequence:
+
+1. Default Launcher.
+2. Enable File Browsing.
+3. Enable Usage Access.
+4. Allow Notifications Access (Android Notification access for showing the phone's notifications).
+5. Modify System Settings (Brightness).
+6. Fix unlinked folders from a restored backup.
+
+Granted steps are skipped. Each permission remains optional; Later/cancellation advances, and unavailable Settings activities do not block setup. Pending Android requests and progress survive recreation. An interrupted folder transaction can be retried, and a fresh launch clears an orphaned picker request. The existing Welcome/start surface follows this flow. The introduction artwork and boot-playback policy are retained. Setup progress and Android grants are excluded from desktop backups.
+
+A successful restore/undo queues folder repair after any remaining setup steps. Folder checks and path lookup run on the worker. Reconnecting a root updates its existing Computer link, favorites and desktop folder-shortcut pages without recreating shortcut IDs, titles, positions or unrelated preferences. Descendants are verified by document IDs or resolved by unique folder names. Missing/ambiguous subfolders are kept, and partial repairs can be retried with **Fix linked folders** in Backup and Restore. A plan is applied only by its live setup flow and only if the referenced saved data has not changed.
+
+Links to a known Nth storage provider can translate to this desktop's own provider when its file permission is already granted; this verifies the destination path and does not transfer permission from another app. Other folders use Android's folder picker and retain its read grant. The setup cannot grant Android permissions itself.
+
+Eight, Ten and Eleven use their existing notification-listener components. Vista and Seven gain the same in-memory listener support, protected by Android's notification-listener binding permission, and phone notifications on their classic tray surfaces. In Vista, Notification Center is available from Device controls (hold the tray chevron); Seven also shows phone notifications in its existing Action Center. Notification content remains in memory and respects the existing locked-phone filtering.
+
+`InitializationFlowTest` exercises the ordered dialogs, granted-step skipping, Settings intents, denial/cancellation, focus/recreation, interrupted/orphaned requests, unavailable Settings, notification-service declarations and last-step folder repair. `FolderRepairTest` exercises root/favorite/shortcut updates, preserved identities/layouts, concurrent-edit protection, partial repairs, de-duplication, real provider grants/path lookup, and missing/ambiguous descendants. The instrumentation APK is compiled; Android device/emulator instrumentation is not run in this workspace.
