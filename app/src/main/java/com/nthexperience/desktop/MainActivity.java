@@ -377,7 +377,7 @@ public final class MainActivity extends Activity implements StartMenu.Actions,Ga
             List<View> buttons=new ArrayList<>();int preferred=0,room=row==0?Math.max(0,taskbar.getWidth()-dp(6)):taskItems.bottomRoom(Math.max(0,taskbar.getWidth()-dp(6)));
             for(int i=0;i<taskItems.getChildCount();i++){View child=taskItems.getChildAt(i);if(TaskbarItems.row(child)==row){buttons.add(child);LinearLayout.LayoutParams p=(LinearLayout.LayoutParams)child.getLayoutParams();preferred+=p.width+p.rightMargin;}}
             if(buttons.isEmpty()||preferred<=room)continue;int gap=room/buttons.size()>=dp(32)?dp(3):0,available=Math.max(0,room-gap*buttons.size());
-            for(int i=0;i<buttons.size();i++){View child=buttons.get(i);int width=available/buttons.size()+(i<available%buttons.size()?1:0);if(child instanceof LinearLayout)resizeTaskButton((LinearLayout)child,width,gap);else{LinearLayout.LayoutParams p=(LinearLayout.LayoutParams)child.getLayoutParams();p.width=width;p.rightMargin=gap;child.setLayoutParams(p);}}
+            for(int i=0;i<buttons.size();i++){View child=buttons.get(i);int width=available/buttons.size()+(i<available%buttons.size()?1:0);if(child instanceof LinearLayout)resizeTaskButton((LinearLayout)child,width,gap);else{LinearLayout.LayoutParams p=(LinearLayout.LayoutParams)child.getLayoutParams();p.width=width;p.rightMargin=gap;child.setLayoutParams(p);if(child instanceof FrameLayout&&((FrameLayout)child).getChildCount()>0){int side=Math.min(dp(24),width);((FrameLayout)child).getChildAt(0).setLayoutParams(new FrameLayout.LayoutParams(side,side,Gravity.CENTER));}}}
         }
     }
     private void saveTaskbarOrder(List<String> order){
