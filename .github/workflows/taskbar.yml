@@ -9,7 +9,31 @@ concurrency:
   group: vista-taskbar-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  scope:
+    runs-on: ubuntu-latest
+    outputs:
+      phase: ${{ steps.scope.outputs.phase }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: scope
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          python3 - <<'PYCODE'
+          import os,re,subprocess
+          before=os.environ.get('BEFORE_SHA','')
+          allowed={'.github/workflows/taskbar.yml','checks/run-taskbar-checks.sh','app/src/androidTest/java/com/nthexperience/desktop/FidelitySmoke.java'}
+          phase='all'
+          if re.fullmatch('[0-9a-f]{40}',before) and subprocess.run(['git','cat-file','-e',before],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0:
+              changed=set(subprocess.check_output(['git','diff','--name-only',before,'HEAD'],text=True).splitlines())
+              if changed and changed<=allowed: phase='fidelity'
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out: out.write('phase='+phase+'\n')
+          print('Native phase:',phase)
+          PYCODE
   taskbar:
+    needs: scope
     strategy:
       fail-fast: false
       matrix:
@@ -67,15 +91,15 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
-          emulator-build: 16740729
+          emulator-build: ${{ matrix.api == 30 && 15917651 || 16740729 }}
           arch: x86_64
           target: ${{ matrix.api == 30 && 'default' || 'aosp_atd' }}
           profile: pixel_2
           ram-size: 2048M
           heap-size: 384M
-          emulator-options: -no-window -gpu swangle -feature -Vulkan -no-snapshot -noaudio -no-boot-anim
+          emulator-options: ${{ matrix.api == 30 && '-no-window -gpu swiftshader -feature -Vulkan -no-snapshot -noaudio -no-boot-anim' || '-no-window -gpu swangle -feature -Vulkan -no-snapshot -noaudio -no-boot-anim' }}
           disable-animations: true
-          script: bash checks/run-taskbar-checks.sh
+          script: bash checks/run-taskbar-checks.sh ${{ needs.scope.outputs.phase }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

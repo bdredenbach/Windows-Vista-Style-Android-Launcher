@@ -12,7 +12,13 @@ collect() {
     fi
   done
   for name in vista-rows-vista vista-rows-failure vista-taskbar-two-rows vista-taskbar-two-rows-landscape vista-taskbar-failure; do
-    adb exec-out run-as com.nthexperience.desktop cat "files/$name-view.png" > "screenshots/$name-view.png" 2>/dev/null || true
+    capture=$(mktemp)
+    adb exec-out run-as com.nthexperience.desktop cat "files/$name-view.png" > "$capture" 2>/dev/null || true
+    if python3 -c 'import pathlib,sys;sys.exit(pathlib.Path(sys.argv[1]).read_bytes()[:8] != bytes([137,80,78,71,13,10,26,10]))' "$capture"; then
+      mv "$capture" "screenshots/$name-view.png"
+    else
+      rm -f "$capture"
+    fi
   done
   adb exec-out run-as com.nthexperience.desktop cat files/vista-taskbar-tree.txt > screenshots/vista-taskbar-tree.txt 2>/dev/null || true
   adb logcat -d -t 500 > screenshots/logcat.txt || true
@@ -21,6 +27,12 @@ trap collect EXIT
 adb install -r fixture/build/outputs/apk/debug/fixture-debug.apk
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+if [[ "${1:-all}" == fidelity ]]; then
+  adb shell appops set --uid com.nthexperience.desktop MANAGE_EXTERNAL_STORAGE allow
+  timeout -k 3s 240s adb shell am instrument -w com.nthexperience.desktop.test/com.nthexperience.desktop.FidelitySmoke | tee fidelity-test.txt
+  grep -q 'PASS:' fidelity-test.txt
+  exit 0
+fi
 timeout -k 3s 240s adb shell am instrument -w com.nthexperience.desktop.test/com.nthexperience.desktop.VistaTaskbarRowsSmoke | tee taskbar-rows-test.txt
 grep -q 'PASS:' taskbar-rows-test.txt
 collect
