@@ -21,6 +21,7 @@ public final class VistaInitializationSmoke extends Instrumentation {
     @Override public void onStart(){
         Bundle result=new Bundle();
         try{
+            progress("Starting optional Vista setup");
             store=new DesktopStore(getTargetContext());
             store.prefs.edit().clear().putInt("startup_mode",2).putBoolean("welcome_on_start",false)
                     .putBoolean("reduce_motion",true).putBoolean("sidebar_visible",false)
@@ -35,7 +36,7 @@ public final class VistaInitializationSmoke extends Instrumentation {
             root=home.getWindow().getDecorView();
             for(String title:new String[]{"Default Launcher","Set up Nth Explorer","Set up Usage Access",
                     "Allow Notifications Access","Modify System Settings (Brightness)","Allow Location"}){
-                awaitSystem(title);
+                progress("Ordered guide: "+title);awaitSystem(title);
                 check(find(root,WelcomeCenter.class)!=null,"Vista Welcome Center stays behind setup");
                 if(title.equals("Set up Usage Access"))orderedUsage();
                 systemClick("Later");
@@ -75,6 +76,7 @@ public final class VistaInitializationSmoke extends Instrumentation {
     }
     private void appInfoReturn()throws Exception{
         if(Build.VERSION.SDK_INT<33)return;
+        progress("Android App info recovery return");
         systemClick("Open App info");awaitPackage("com.android.settings");
         awaitSystem(home.getString(R.string.app_name));shot("vista-usage-android-app-info");
         back();awaitSystem("Set up Usage Access");
@@ -83,6 +85,7 @@ public final class VistaInitializationSmoke extends Instrumentation {
         check(node(getUiAutomation().getRootInActiveWindow(),"Open App info")!=null,"Recovery stays available after App info");
     }
     private void manualUsage()throws Exception{
+        progress("Welcome Center manual retry and recreation");
         WelcomeCenter welcome=find(root,WelcomeCenter.class);check(welcome!=null,"Existing Welcome Center retry route exists");
         View link=text(welcome,"Set up Usage Access");check(link!=null,"Welcome Center has Set up Usage Access");
         ui(()->link.requestRectangleOnScreen(new Rect(0,0,link.getWidth(),link.getHeight()),true));
@@ -94,6 +97,7 @@ public final class VistaInitializationSmoke extends Instrumentation {
         shot("vista-usage-manual-return");systemClick("Cancel");
     }
     private void grantedUsage()throws Exception{
+        progress("Android grant and taskbar checkbox refresh");
         // Android's real AppOps service provides the grant; Activity result codes are not used as permission proof.
         ui(()->getTargetContext().getSharedPreferences(InitializationState.PREFS,0).edit()
                 .putInt("step",InitializationState.Step.USAGE.ordinal()).commit());
@@ -168,5 +172,6 @@ public final class VistaInitializationSmoke extends Instrumentation {
     private void dumpTree()throws Exception{StringBuilder out=new StringBuilder();dump(getUiAutomation().getRootInActiveWindow(),out,0);try(OutputStream file=getTargetContext().openFileOutput("vista-usage-tree.txt",0)){file.write(out.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));}}
     private void dump(AccessibilityNodeInfo n,StringBuilder out,int depth){if(n==null||depth>30)return;out.append(depth).append(' ').append(n.getText()).append(" / ").append(n.getContentDescription()).append('\n');for(int i=0;i<n.getChildCount();i++)dump(n.getChild(i),out,depth+1);}
     private String shell(String command)throws Exception{try(ParcelFileDescriptor fd=getUiAutomation().executeShellCommand(command);InputStream in=new ParcelFileDescriptor.AutoCloseInputStream(fd);ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] bytes=new byte[4096];for(int n;(n=in.read(bytes))!=-1;)out.write(bytes,0,n);return out.toString("UTF-8");}}
+    private void progress(String message){Bundle data=new Bundle();data.putString("stream","CHECK: "+message+"\n");sendStatus(1,data);}
     private static void check(boolean ok,String why){if(!ok)throw new AssertionError(why);}
 }

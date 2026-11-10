@@ -89,12 +89,18 @@ jobs:
           arch: x86_64
           target: ${{ matrix.api == 30 && 'default' || matrix.phase == 'initialization' && 'google_apis' || 'aosp_atd' }}
           profile: pixel_2
-          ram-size: 2048M
-          heap-size: 384M
+          ram-size: ${{ matrix.api == 36 && matrix.phase == 'initialization' && '3072M' || '2048M' }}
+          heap-size: ${{ matrix.api == 36 && matrix.phase == 'initialization' && '512M' || '384M' }}
           emulator-options: -no-window -gpu swiftshader -feature -Vulkan -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           emulator-boot-timeout: 300
           script: bash checks/${{ matrix.phase == 'initialization' && 'run-vista-initialization-checks.sh' || 'run-taskbar-checks.sh' }}
+      - name: Keep emulator host resource diagnostics
+        if: always() && matrix.phase == 'initialization'
+        run: |
+          mkdir -p screenshots
+          free -m > screenshots/emulator-host-memory.txt
+          sudo dmesg | rg -i 'out of memory|oom-kill|killed process|segfault' > screenshots/emulator-host-errors.txt || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
