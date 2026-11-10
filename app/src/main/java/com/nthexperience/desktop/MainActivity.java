@@ -42,7 +42,7 @@ public final class MainActivity extends Activity implements StartMenu.Actions,Ga
     static final int REQUEST_USAGE_ACCESS=311, REQUEST_USAGE_APP_INFO=312;
     private enum UsageGuide { FIRST_RUN, MANUAL, RETURN }
     private int usageSettingsRequest;
-    private boolean usageSettingsLeft,includesExternalApps;
+    private boolean usageSettingsLeft,includesExternalApps,restoreUsageGuide;
     private AlertDialog usageGuide;
     private StorageSetup storageSetup;private boolean restoreStorageSetup;private boolean storageAllowed;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
@@ -87,6 +87,7 @@ public final class MainActivity extends Activity implements StartMenu.Actions,Ga
             homeRequestInFlight=saved.getBoolean("home_request_in_flight");
             usageSettingsRequest=saved.getInt("usage_settings_request");
             usageSettingsLeft=saved.getBoolean("usage_settings_left");
+            restoreUsageGuide=saved.getBoolean("usage_guide_open");
         }
         store.migrateDesktop();
         includesExternalApps=ExternalTasks.includesExternalApps(store,ExternalTasks.permitted(this));
@@ -795,18 +796,14 @@ public final class MainActivity extends Activity implements StartMenu.Actions,Ga
         content.addView(Aero.text(this,message,14,Aero.INK));
         if(showAppInfo){
             String steps="In App info, tap the three dots (⋮) and choose Allow restricted settings if shown. "
-                    +"Then press Back to return to the Usage Access switch.";
+                    +"Then press Back to return to this guide and tap OK to try Usage Access again.";
             if(!returning)steps="If Android says ‘App was denied access’, tap Close, then press Back to "+appName+". "
                     +"This guide will reopen. Tap Open App info below. "+steps;
             TextView recovery=Aero.text(this,steps,14,Aero.INK);
             recovery.setPadding(0,dp(12),0,dp(10));
             content.addView(recovery);
 
-            ImageView example=new ImageView(this);
-            example.setAdjustViewBounds(true);
-            example.setImageResource(R.drawable.usage_access_app_info);
-            example.setContentDescription("Android App info menu showing Allow restricted settings");
-            content.addView(example,new LinearLayout.LayoutParams(-1,-2));
+            content.addView(new UsageAccessExample(this),new LinearLayout.LayoutParams(-1,-2));
         }
 
         ScrollView scroll=new ScrollView(this);
@@ -863,12 +860,18 @@ public final class MainActivity extends Activity implements StartMenu.Actions,Ga
         if(destroyed||restoringBackup||isFinishing()||!hasWindowFocus())return;
         if(refreshUsageAccess())scanApps();
         // Android may deliver a Settings result before its activity has taken focus.
-        if(!usageSettingsLeft)return;
+        if(!usageSettingsLeft){
+            if(restoreUsageGuide){restoreUsageGuide=false;if(!ExternalTasks.permitted(this))showTaskbarUsageGuide(UsageGuide.RETURN);}
+            return;
+        }
         int request=usageSettingsRequest;
         usageSettingsRequest=0;
         usageSettingsLeft=false;
-        if(request==REQUEST_USAGE_APP_INFO)requestTaskbarUsage();
-        else if(request==REQUEST_USAGE_ACCESS&&!ExternalTasks.permitted(this))showTaskbarUsageGuide(UsageGuide.RETURN);
+        restoreUsageGuide=false;
+        if(request==REQUEST_USAGE_APP_INFO||request==REQUEST_USAGE_ACCESS){
+            if(ExternalTasks.permitted(this))setTaskbarUsage(true);
+            else showTaskbarUsageGuide(UsageGuide.RETURN);
+        }
     }
 
     private void setTaskbarUsage(boolean enabled){
@@ -988,7 +991,7 @@ public final class MainActivity extends Activity implements StartMenu.Actions,Ga
         if(!next.equals(layoutKey)){arrangementUndo.clear();for(DesktopWindow tool:windows.values())if(tool.getParent()!=null){tool.dismissSystemMenu();tool.settle();tool.orientation(next);}layoutKey=next;desktop.orientation(next);sidebar.orientation(next);}
         if(startup!=null){startup.pause();startup.resume();}if(desktopMenu!=null)desktopMenu.dismiss();if(tray!=null)tray.dismiss();pausedSession=null;applySystemChrome();workspace.post(()->{layoutWorkspace();renderTaskbar();});
     }
-    @Override protected void onSaveInstanceState(Bundle state){super.onSaveInstanceState(state);state.putBoolean("storage_setup_open",storageSetup!=null&&storageSetup.showing());state.putBoolean("home_request_in_flight",homeRequestInFlight);state.putInt("usage_settings_request",usageSettingsRequest);state.putBoolean("usage_settings_left",usageSettingsLeft);state.putString("folder_window",pendingFolderWindow);if(!restoringBackup)state.putString("desktop_session",(pausedSession==null?captureSession():pausedSession).toString());}
+    @Override protected void onSaveInstanceState(Bundle state){super.onSaveInstanceState(state);state.putBoolean("storage_setup_open",storageSetup!=null&&storageSetup.showing());state.putBoolean("home_request_in_flight",homeRequestInFlight);state.putInt("usage_settings_request",usageSettingsRequest);state.putBoolean("usage_settings_left",usageSettingsLeft);state.putBoolean("usage_guide_open",usageGuide!=null);state.putString("folder_window",pendingFolderWindow);if(!restoringBackup)state.putString("desktop_session",(pausedSession==null?captureSession():pausedSession).toString());}
     private JSONObject captureSession(){
         JSONObject session=new JSONObject();JSONArray tools=new JSONArray();
         if(workspace==null)return session;

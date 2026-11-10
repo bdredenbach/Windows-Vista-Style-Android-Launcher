@@ -9,6 +9,14 @@ final class InitializationState {
     enum Step { HOME, FILES, USAGE, NOTIFICATIONS, BRIGHTNESS, LOCATION, FOLDERS, DONE }
     final SharedPreferences prefs;
     InitializationState(Context context){prefs=context.getSharedPreferences(PREFS,0);
+        // Releases before the ordered flow already offered Home and file setup.
+        // Preserve those choices on update and offer only the newly added location step.
+        SharedPreferences legacy=context.getSharedPreferences(StartupExperience.SESSION,0);
+        if(!prefs.contains("flow_version")&&!prefs.contains("step")
+                &&legacy.getBoolean(StartupExperience.HOME_OFFERED,false)
+                &&context.getSharedPreferences(StorageAccess.PREFS,0).getBoolean("seen",false)){
+            prefs.edit().putInt("step",Step.LOCATION.ordinal()).putInt("flow_version",2).commit();
+        }
         // v1 used 5 for folder repair and 6 for Done. Offer the newly added location step once.
         if(prefs.getInt("flow_version",1)<2){int old=prefs.getInt("step",0);prefs.edit().putInt("step",old>=5?Step.LOCATION.ordinal():Math.max(0,old)).putInt("flow_version",2).commit();}
     }

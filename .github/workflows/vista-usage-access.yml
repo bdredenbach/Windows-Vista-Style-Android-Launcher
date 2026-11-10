@@ -1,0 +1,106 @@
+name: Vista Usage Access return validation
+on:
+  push:
+    branches: [fix/vista-usage-access-return]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: vista-usage-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+          log-accepted-android-sdk-licenses: 'false'
+      - run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Preserve the established Vista desktop
+        run: python3 checks/CheckVistaUsageIntegration.py
+      - name: Unit tests and app/instrumentation compilation
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :fixture:assembleDebug --no-daemon
+      - name: Verify packaged instrumentation
+        run: python3 checks/CheckTestManifest.py
+      - name: Keep APK verification tools
+        run: |
+          mkdir -p build/signing-tool
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" build/signing-tool/
+          cp "$ANDROID_HOME/build-tools/35.0.0/aapt" build/signing-tool/
+          cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" build/signing-tool/
+          cp -r "$ANDROID_HOME/build-tools/35.0.0/lib64" build/signing-tool/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Vista-0.26.3-build
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            fixture/build/outputs/apk/debug/fixture-debug.apk
+            build/signing-tool/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Vista-0.26.3-unit-results
+          path: app/build/test-results/testDebugUnitTest/
+  native:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [30, 36]
+        phase: [initialization, desktop]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+          log-accepted-android-sdk-licenses: 'false'
+      - uses: actions/download-artifact@v4
+        with:
+          name: Vista-0.26.3-build
+          path: .
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Validate native setup separately from desktop regressions
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          emulator-build: 15917651
+          arch: x86_64
+          target: ${{ matrix.api == 30 && 'default' || matrix.phase == 'initialization' && 'google_apis' || 'aosp_atd' }}
+          profile: pixel_2
+          ram-size: 2048M
+          heap-size: 384M
+          emulator-options: -no-window -gpu swiftshader -feature -Vulkan -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          emulator-boot-timeout: 300
+          script: bash checks/${{ matrix.phase == 'initialization' && 'run-vista-initialization-checks.sh' || 'run-taskbar-checks.sh' }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Vista-0.26.3-${{ matrix.phase }}-${{ matrix.api }}
+          path: |
+            vista-initialization-test.txt
+            extended-taskbar-test.txt
+            fidelity-test.txt
+            screenshots/
