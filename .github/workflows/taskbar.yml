@@ -1,7 +1,7 @@
 name: Vista taskbar regression
 on:
   push:
-    branches: [feature/vista-extended-taskbar]
+    branches: [feature/vista-independent-rows]
   workflow_dispatch:
 permissions:
   contents: read
@@ -15,7 +15,7 @@ jobs:
       matrix:
         api: [30, 36]
     runs-on: ubuntu-latest
-    timeout-minutes: 22
+    timeout-minutes: 28
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -41,14 +41,23 @@ jobs:
           java -cp build/state-check com.nthexperience.desktop.ControlPanelCatalogCheck
           java -cp build/state-check com.nthexperience.desktop.WindowArrangementCheck
           java -cp build/state-check com.nthexperience.desktop.TaskbarGroupingCheck
-      - run: ./gradlew assembleDebug assembleDebugAndroidTest --no-daemon
+      - run: ./gradlew :app:testDebugUnitTest assembleDebug assembleDebugAndroidTest --no-daemon
       - name: Check packaged test registrations
         run: python3 checks/CheckTestManifest.py
+      - name: Keep APK verification tools
+        if: matrix.api == 30
+        run: |
+          mkdir -p build/signing-tool
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" "$ANDROID_HOME/build-tools/35.0.0/aapt" "$ANDROID_HOME/build-tools/35.0.0/zipalign" build/signing-tool/
+          cp -r "$ANDROID_HOME/build-tools/35.0.0/lib64" build/signing-tool/
       - uses: actions/upload-artifact@v4
         if: matrix.api == 30
         with:
-          name: Nth-Desktop-Vista-0.26.1-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: Nth-Desktop-Vista-0.26.4-build
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            build/signing-tool/
+            app/build/test-results/testDebugUnitTest/
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -73,5 +82,7 @@ jobs:
           name: Vista-taskbar-evidence-${{ matrix.api }}
           path: |
             extended-taskbar-test.txt
+            taskbar-rows-test.txt
             fidelity-test.txt
+            app/build/test-results/testDebugUnitTest/
             screenshots/

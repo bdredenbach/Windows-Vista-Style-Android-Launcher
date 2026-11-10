@@ -2,7 +2,7 @@
 set -euo pipefail
 mkdir -p screenshots
 collect() {
-  for name in vista-taskbar-two-rows vista-taskbar-two-rows-landscape vista-taskbar-two-rows-start vista-taskbar-controls-bottom vista-taskbar-controls-bottom-landscape vista-taskbar-failure fidelity-failure; do
+  for name in vista-taskbar-two-rows vista-taskbar-two-rows-landscape vista-taskbar-two-rows-start vista-taskbar-controls-bottom vista-taskbar-controls-bottom-landscape vista-taskbar-failure fidelity-failure vista-rows-vista vista-rows-failure; do
     capture=$(mktemp)
     timeout -k 2s 5s adb exec-out run-as com.nthexperience.desktop cat "files/$name.png" > "$capture" 2>/dev/null || true
     if python3 -c 'import pathlib,sys;sys.exit(pathlib.Path(sys.argv[1]).read_bytes()[:8] != bytes([137,80,78,71,13,10,26,10]))' "$capture"; then
@@ -18,6 +18,11 @@ trap collect EXIT
 adb install -r fixture/build/outputs/apk/debug/fixture-debug.apk
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+timeout -k 3s 240s adb shell am instrument -w com.nthexperience.desktop.test/com.nthexperience.desktop.VistaTaskbarRowsSmoke | tee taskbar-rows-test.txt
+grep -q 'PASS:' taskbar-rows-test.txt
+collect
+adb shell am force-stop com.nthexperience.desktop
+adb shell pm clear com.nthexperience.desktop
 timeout -k 3s 300s adb shell am instrument -w com.nthexperience.desktop.test/com.nthexperience.desktop.ExtendedTaskbarSmoke | tee extended-taskbar-test.txt
 grep -q 'PASS:' extended-taskbar-test.txt
 collect
