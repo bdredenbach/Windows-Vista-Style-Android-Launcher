@@ -67,13 +67,13 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
-          emulator-build: 15917651
+          emulator-build: 16740729
           arch: x86_64
           target: ${{ matrix.api == 30 && 'default' || 'aosp_atd' }}
           profile: pixel_2
           ram-size: 2048M
           heap-size: 384M
-          emulator-options: -no-window -gpu swiftshader -feature -Vulkan -no-snapshot -noaudio -no-boot-anim
+          emulator-options: -no-window -gpu swangle -feature -Vulkan -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           script: bash checks/run-taskbar-checks.sh
       - uses: actions/upload-artifact@v4

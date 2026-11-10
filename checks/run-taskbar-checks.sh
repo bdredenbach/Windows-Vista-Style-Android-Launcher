@@ -11,6 +11,9 @@ collect() {
       rm -f "$capture"
     fi
   done
+  for name in vista-rows-vista vista-rows-failure vista-taskbar-two-rows vista-taskbar-two-rows-landscape vista-taskbar-failure; do
+    adb exec-out run-as com.nthexperience.desktop cat "files/$name-view.png" > "screenshots/$name-view.png" 2>/dev/null || true
+  done
   adb exec-out run-as com.nthexperience.desktop cat files/vista-taskbar-tree.txt > screenshots/vista-taskbar-tree.txt 2>/dev/null || true
   adb logcat -d -t 500 > screenshots/logcat.txt || true
 }

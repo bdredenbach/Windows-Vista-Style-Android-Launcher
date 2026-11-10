@@ -23,6 +23,7 @@ public final class VistaTaskbarRowsSmoke extends ExtendedTaskbarSmoke {
             ui(()->{TaskbarItems items=find(TaskbarItems.class);items.stopScrolling();items.scrollRowTo(0,0);items.scrollRowTo(1,0);store.prefs.edit().commit();refreshBar();});settle();
             dragAcross("quick:@photos",0);checkRow("quick:@photos",0,"Idle pin dragged to top");
             dragAcross("task:@notes",1);checkRow("task:@notes",1,"Running app dragged to bottom");
+            tap(slot("quick:@photos"),60);await(()->window("@photos")!=null&&window("@photos").isShown(),"Moved Quick Launch shortcut opens correct app");
             String saved=store.prefs.getString(TaskbarRows.KEY,"");
             ui(()->{home.open("@photos");try{java.lang.reflect.Field f=MainActivity.class.getDeclaredField("windows");f.setAccessible(true);Map<?,?> windows=(Map<?,?>)f.get(home);((DesktopWindow)windows.get("@notes")).closeWindow();}catch(Exception e){throw new RuntimeException(e);}});settle();
             checkRow("quick:@photos",0,"Pin retains chosen row after launch");ui(()->home.open("@notes"));settle();checkRow("task:@notes",1,"Running app retains chosen bottom row after reopen");
@@ -37,6 +38,7 @@ public final class VistaTaskbarRowsSmoke extends ExtendedTaskbarSmoke {
         ui(()->home.finish());waitForIdleSync();home=(MainActivity)startActivitySync(new Intent(Intent.ACTION_MAIN).setComponent(new ComponentName(getTargetContext(),MainActivity.class)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));root=home.getWindow().getDecorView();store=new DesktopStore(home);settle();checkRow("quick:@photos",0,"Fresh Activity retains top choice");ui(()->home.open("@notes"));settle();checkRow("task:@notes",1,"Fresh Activity retains bottom choice");
         ui(()->{View notes=slot("task:@notes");check(notes.performAccessibilityAction(R.id.taskbar_move_top,null),"Accessible move-to-top action accepted");});settle();checkRow("task:@notes",0,"Accessibility row move persisted");
         ui(()->{View notes=slot("task:@notes");check(notes.requestFocusFromTouch(),"Task button receives keyboard focus");check(notes.dispatchKeyEvent(new KeyEvent(0,0,KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_DOWN,0,KeyEvent.META_CTRL_ON|KeyEvent.META_SHIFT_ON)),"Keyboard row move accepted");});settle();checkRow("task:@notes",1,"Keyboard row move persisted");
+        extraInputCases();
         out.putString("stream","PASS: "+checks+" independent-row assertions; real upper/lower swipes leave all apps in the opposite row stationary, native drag/drop in both directions, default and saved placement through launch/close/reopen, collapse/expand, rotation, portable backup, static fitting, fixed controls and accessible/keyboard row moves.\n");finish(Activity.RESULT_OK,out);
     }catch(Throwable e){out.putString("stream","FAIL: "+android.util.Log.getStackTraceString(e));try{shot("vista-rows-failure.png");}catch(Exception ignored){}finish(Activity.RESULT_CANCELED,out);}}
     @Override protected void check(boolean ok,String message){checks++;super.check(ok,message);}
@@ -60,5 +62,29 @@ public final class VistaTaskbarRowsSmoke extends ExtendedTaskbarSmoke {
     View slot(String key){return find(v->key.equals(TaskbarReorder.key(v)));}
     String bounds(View v){return screen(v).toShortString();}
     Map<String,View> fixedViews(){Map<String,View> result=new LinkedHashMap<>();for(String id:new String[]{"Start menu","Taskbar commands","Clock and calendar","Device controls","Show desktop"})result.put(id,find(v->id.equals(v.getContentDescription())));return result;}
+
+    void extraInputCases()throws Exception{
+        ui(()->{closeAllWindows();store.quickLaunch(Arrays.asList("@photos","@browser","@recycle","@calendar","@welcome","@sticky","@computer","@files","@documents","@notes","@backup","@system"));store.prefs.edit().remove(TaskbarRows.KEY).remove(TaskbarOrder.KEY).putBoolean("taskbar_static",false).commit();for(String id:new String[]{"@notes","@system","@recent","@backup","@taskmanager"})home.open(id);refreshBar();});settle();
+        for(int row=0;row<2;row++){
+            final int chosen=row;ui(()->{TaskbarItems items=find(TaskbarItems.class);items.scrollRowTo(0,0);items.scrollRowTo(1,0);});settle();List<String> other=geometryRow(1-row);
+            TaskbarItems items=find(TaskbarItems.class);int[] at=new int[2];items.getLocationOnScreen(at);float x=at[0]+(items.rowStart(row)+items.rowEnd(row))/2f,y=at[1]+Aero.dp(home,row*48+24);long time=SystemClock.uptimeMillis();
+            MotionEvent.PointerProperties prop=new MotionEvent.PointerProperties();prop.id=0;prop.toolType=MotionEvent.TOOL_TYPE_MOUSE;MotionEvent.PointerCoords coord=new MotionEvent.PointerCoords();coord.x=x;coord.y=y;coord.setAxisValue(MotionEvent.AXIS_VSCROLL,-3);
+            MotionEvent wheel=MotionEvent.obtain(time,time,MotionEvent.ACTION_SCROLL,1,new MotionEvent.PointerProperties[]{prop},new MotionEvent.PointerCoords[]{coord},0,0,1,1,0,0,InputDevice.SOURCE_MOUSE,0);check(getUiAutomation().injectInputEvent(wheel,true),"Mouse wheel injected");wheel.recycle();settle();check(items.rowScroll(row)>0,"Mouse wheel moves selected row");check(other.equals(geometryRow(1-row)),"Mouse wheel leaves opposite row fixed");
+        }
+        ui(()->{TaskbarItems i=find(TaskbarItems.class);i.scrollRowTo(0,0);i.scrollRowTo(1,0);});settle();
+        String rows=store.prefs.getString(TaskbarRows.KEY,"{}"),order=store.prefs.getString(TaskbarOrder.KEY,"[]");
+        dragOutside("task:@notes");check(rows.equals(store.prefs.getString(TaskbarRows.KEY,"{}"))&&order.equals(store.prefs.getString(TaskbarOrder.KEY,"[]")),"Rejected drop never changes row or order");check(slot("task:@notes").getAlpha()==1f,"Rejected drop restores source opacity");
+        // Hold at a row edge, move outside, and drop: scroll the hovered row only.
+        ui(()->{TaskbarItems i=find(TaskbarItems.class);i.scrollRowTo(0,0);i.scrollRowTo(1,0);});settle();List<String> other=geometryRow(1);
+        View source=slot("task:@notes");Rect sourceBounds=screen(source);TaskbarItems items=find(TaskbarItems.class);Rect area=screen(items);long down=SystemClock.uptimeMillis();float x=sourceBounds.exactCenterX(),y=sourceBounds.exactCenterY();
+        touch(MotionEvent.ACTION_DOWN,x,y,down);Thread.sleep(185);touch(MotionEvent.ACTION_MOVE,x+Aero.dp(home,14),y,down);Thread.sleep(100);touch(MotionEvent.ACTION_MOVE,area.right-Aero.dp(home,2),y,down);Thread.sleep(360);check(items.rowScroll(0)>0,"Drag edge scroll moves hovered row");check(other.equals(geometryRow(1)),"Drag edge scroll leaves opposite row fixed");
+        touch(MotionEvent.ACTION_MOVE,area.exactCenterX(),area.top-Aero.dp(home,70),down);Thread.sleep(80);int stopped=items.rowScroll(0);Thread.sleep(100);check(items.rowScroll(0)==stopped,"Leaving row stops edge scroll");touch(MotionEvent.ACTION_UP,area.exactCenterX(),area.top-Aero.dp(home,70),down);settle();check(slot("task:@notes").getAlpha()==1f,"Interrupted edge drag restores opacity");
+        ui(()->{closeAllWindows();store.quickLaunch(Collections.emptyList());store.prefs.edit().remove(TaskbarRows.KEY).remove(TaskbarOrder.KEY).commit();home.open("@notes");refreshBar();});settle();check(find(TaskbarItems.class).getChildCount()==1,"Single app fixture");dragAcross("task:@notes",1);checkRow("task:@notes",1,"Single app moves into empty bottom row");dragAcross("task:@notes",0);checkRow("task:@notes",0,"Single app moves into empty top row");
+        // Stationary holds still use Vista's real system menu.
+        tap(slot("task:@notes"),700);awaitNode("Close");shell("input keyevent 4");settle();
+    }
+    void dragOutside(String id)throws Exception{
+        View source=slot(id);Rect r=screen(source),area=screen(find(TaskbarItems.class));float x=r.exactCenterX(),y=r.exactCenterY();long down=SystemClock.uptimeMillis();touch(MotionEvent.ACTION_DOWN,x,y,down);Thread.sleep(185);touch(MotionEvent.ACTION_MOVE,x+Aero.dp(home,14),y,down);Thread.sleep(100);touch(MotionEvent.ACTION_MOVE,area.exactCenterX(),area.top-Aero.dp(home,80),down);Thread.sleep(100);touch(MotionEvent.ACTION_UP,area.exactCenterX(),area.top-Aero.dp(home,80),down);settle();
+    }
 
 }

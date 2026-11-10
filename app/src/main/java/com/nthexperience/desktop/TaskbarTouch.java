@@ -12,9 +12,7 @@ final class TaskbarTouch {
         view.setOnTouchListener(new View.OnTouchListener(){
             float x,y;boolean tracking,swiped,scrolling;
             public boolean onTouch(View button,MotionEvent event){
-                AeroGlass glass=button.getBackground() instanceof AeroGlass?(AeroGlass)button.getBackground():null;
                 int action=event.getActionMasked();
-                
                 if(action==MotionEvent.ACTION_DOWN){
                     x=event.getRawX();y=event.getRawY();tracking=true;swiped=scrolling=false;
                     if(event.isButtonPressed(MotionEvent.BUTTON_SECONDARY)){tracking=false;button.performContextClick();return true;}
