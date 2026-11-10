@@ -28,7 +28,7 @@ jobs:
           phase='all'
           if re.fullmatch('[0-9a-f]{40}',before) and subprocess.run(['git','cat-file','-e',before],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0:
               changed=set(subprocess.check_output(['git','diff','--name-only',before,'HEAD'],text=True).splitlines())
-              if changed and changed<=allowed: phase='fidelity'
+              if 'app/src/androidTest/java/com/nthexperience/desktop/FidelitySmoke.java' in changed and changed<=allowed: phase='fidelity'
           with open(os.environ['GITHUB_OUTPUT'],'a') as out: out.write('phase='+phase+'\n')
           print('Native phase:',phase)
           PYCODE
