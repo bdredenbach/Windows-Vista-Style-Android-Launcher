@@ -19,11 +19,6 @@ adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb shell pm clear "$launcher"
 adb shell input keyevent KEYCODE_WAKEUP
 adb shell wm dismiss-keyguard
-if [ "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = 36 ]; then
-  # A full Settings image is required; keep software rendering within the hosted runner's limits.
-  adb shell wm size 720x1280
-  adb shell wm density 320
-fi
 adb logcat -v threadtime > screenshots/vista-initialization-live-log.txt 2>&1 &
 logcat_pid=$!
 adb shell appops set --uid "$launcher" GET_USAGE_STATS deny

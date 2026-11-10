@@ -85,12 +85,12 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
-          emulator-build: 15917651
+          emulator-build: ${{ matrix.phase == 'initialization' && 16740729 || 15917651 }}
           arch: x86_64
           target: ${{ matrix.api == 30 && 'default' || matrix.phase == 'initialization' && 'google_apis' || 'aosp_atd' }}
           profile: pixel_2
-          ram-size: ${{ matrix.api == 36 && matrix.phase == 'initialization' && '3072M' || '2048M' }}
-          heap-size: ${{ matrix.api == 36 && matrix.phase == 'initialization' && '512M' || '384M' }}
+          ram-size: 2048M
+          heap-size: 384M
           emulator-options: -no-window -gpu swiftshader -feature -Vulkan -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           emulator-boot-timeout: 300
