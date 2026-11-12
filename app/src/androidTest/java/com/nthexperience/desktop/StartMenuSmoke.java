@@ -16,7 +16,7 @@ import java.util.function.*;
 /** Real touch input regression: ListView callbacks alone missed the intercepted-row bug. */
 public final class StartMenuSmoke extends Instrumentation {
     private MainActivity home;private View root;private DesktopStore store;private int assertions;
-    private static final String APP="com.nthexperience.desktop.fixture/.TaskActivity";
+    private static final String APP="com.nthexperience.desktop.fixture/com.nthexperience.desktop.fixture.TaskActivity";
     @Override public void onCreate(Bundle args){super.onCreate(args);start();}
     @Override public void onStart(){Bundle result=new Bundle();try{
         store=new DesktopStore(getTargetContext());store.prefs.edit().putInt("startup_mode",2).putBoolean("welcome_on_start",false).putBoolean("reduce_motion",true).putBoolean("desktop_sounds",false).commit();
@@ -55,7 +55,10 @@ public final class StartMenuSmoke extends Instrumentation {
     });}
     private void backHome()throws Exception{sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);await(()->uiValue(()->home.hasWindowFocus()),"Back to desktop");}
     private void dismiss()throws Exception{sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);waitForIdleSync();}
-    private void tapProgram(String id,long hold)throws Exception{await(()->program(id)!=null,"Program row ready: "+id);tap(program(id),hold);}
+    private void tapProgram(String id,long hold)throws Exception{
+        await(()->uiValue(()->{StartMenu menu=(StartMenu)findIn(root,v->v instanceof StartMenu);if(menu==null)return false;ListView list=(ListView)findIn(menu,v->v instanceof ListView);for(int i=0;i<list.getAdapter().getCount();i++)if(((StartSearch.Result)list.getAdapter().getItem(i)).id.equals(id)){list.setSelection(i);return true;}return false;}),"Program available: "+id);
+        waitForIdleSync();await(()->program(id)!=null,"Program row ready: "+id);tap(program(id),hold);
+    }
     private void tap(View view,long hold)throws Exception{check(view!=null,"Touch target exists");getUiAutomation().waitForIdle(150,2500);int[] xy=new int[2];ui(()->view.getLocationOnScreen(xy));float x=xy[0]+view.getWidth()/2f,y=xy[1]+view.getHeight()/2f;long down=SystemClock.uptimeMillis();MotionEvent e=MotionEvent.obtain(down,down,MotionEvent.ACTION_DOWN,x,y,0);e.setSource(InputDevice.SOURCE_TOUCHSCREEN);check(getUiAutomation().injectInputEvent(e,true),"Touch DOWN delivered");e.recycle();Thread.sleep(hold);e=MotionEvent.obtain(down,SystemClock.uptimeMillis(),MotionEvent.ACTION_UP,x,y,0);e.setSource(InputDevice.SOURCE_TOUCHSCREEN);check(getUiAutomation().injectInputEvent(e,true),"Touch UP delivered");e.recycle();waitForIdleSync();getUiAutomation().waitForIdle(150,2500);}
     private void mouse(View view)throws Exception{
         check(view!=null,"Mouse target exists");int[] xy=new int[2];ui(()->view.getLocationOnScreen(xy));long down=SystemClock.uptimeMillis();
