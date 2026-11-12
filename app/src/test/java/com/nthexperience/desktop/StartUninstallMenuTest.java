@@ -43,4 +43,13 @@ public class StartUninstallMenuTest {
   store.desktop(Arrays.asList("@notes","@computer"));ExplorerClipboard.shortcuts(Collections.singletonList(ID),"start",true);ExplorerClipboard.paste(store,"desktop");assertFalse(store.startPins().contains(ID));assertEquals(Arrays.asList("@notes","@computer",ID),store.desktop());ExplorerClipboard.clear();
  }
 
+ @Test public void deleteOnlyHidesStartShortcutAndKeepsAppAndDesktop(){
+  store.desktop(Collections.singletonList(ID));menu.entries(Collections.singletonList(new AppCatalog.Entry(ID,NAME,new ColorDrawable())));menu.show(false);ListView list=ReflectionHelpers.getField(menu,"list");View row=list.getAdapter().getView(0,null,list);root.addView(row,new FrameLayout.LayoutParams(300,48));row.layout(0,0,300,48);row.performLongClick();find(popup().getContentView(),"Delete").performClick();
+  android.app.AlertDialog confirm=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(confirm);assertTrue(store.startPins().contains(ID));confirm.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick();
+  assertTrue(StartItemMenus.hidden(store,ID));assertFalse(store.startPins().contains(ID));assertTrue(store.desktop().contains(ID));assertTrue(AppUninstaller.available(activity,ID));assertNull(shadowOf(activity).getNextStartedActivityForResult());
+ }
+ @Test public void removedStartItemsAreValidatedAndIncludedInBackup()throws Exception{
+  store.prefs.edit().putString("start_deleted","[\""+ID+"\"]").putString("start_removed_recent","[\"@notes\"]").commit();DesktopBackup.Plan plan=DesktopBackup.parse(DesktopBackup.snapshot(store).toString());assertEquals("[\""+ID+"\"]",plan.values.get("start_deleted"));assertEquals("[\"@notes\"]",plan.values.get("start_removed_recent"));
+ }
+
 }

@@ -71,7 +71,7 @@ final class StartItemMenus {
         if(AppUninstaller.available(context,id)){menu.separator();AppUninstaller.add(menu,context,id);}
         return menu;
     }
-    private static void properties(Context context,DesktopStore store,StartSearch.Result item){
+    static void properties(Context context,DesktopStore store,StartSearch.Result item){
         ComponentName component=ComponentName.unflattenFromString(item.id);
         if(component!=null){
             try{context.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+component.getPackageName())));}

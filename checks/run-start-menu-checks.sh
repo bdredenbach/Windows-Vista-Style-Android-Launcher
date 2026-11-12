@@ -2,9 +2,7 @@
 set -euo pipefail
 mkdir -p screenshots
 collect() {
-  for name in portrait landscape failure; do
-    adb exec-out run-as com.nthexperience.desktop cat "files/vista-start-${name/failure/failure}.png" > "screenshots/vista-start-$name.png" 2>/dev/null || true
-  done
+  adb exec-out run-as com.nthexperience.desktop cat files/vista-start-failure.png > screenshots/vista-start-failure.png 2>/dev/null || true
   for name in portrait landscape; do
     adb exec-out run-as com.nthexperience.desktop cat "files/vista-start-menu-$name.png" > "screenshots/vista-start-menu-$name.png" 2>/dev/null || true
   done

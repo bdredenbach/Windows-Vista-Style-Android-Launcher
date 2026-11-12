@@ -101,12 +101,12 @@ final class StartMenu extends LinearLayout {
         flyout.defaultLast();
         if(Arrays.asList("@computer","@files","@documents","@pictures","@music").contains(id)){
             flyout.item("Explore","files",()->actions.open(id));
-            if(id.equals("@computer"))flyout.item("Manage","control",()->actions.open("@taskmanager"));
+            if(id.equals("@computer"))flyout.item("Manage","control",false,()->{});
             flyout.separator();
             flyout.item("Create Shortcut","empty",()->{if(!store.pinned(id))store.toggle(id);actions.shortcutsChanged();});
         }
         flyout.separator();
-        flyout.item("Properties","empty",()->actions.open(id.equals("@computer")?"@system":id.equals("@files")?"setting:page:accounts":id.equals("@control")?"setting:page:taskbar":id));
+        flyout.item("Properties","empty",()->{if(id.equals("@computer"))actions.open("@system");else if(id.equals("@control"))actions.open("setting:page:taskbar");else StartItemMenus.properties(getContext(),store,new StartSearch.Result(id,title,"Start navigation","files",null,false));});
         ContextMenus.centered(anchor,(x,y)->ContextMenus.show(flyout,anchor,x,y));
     }
     private void startOptions(View anchor){
