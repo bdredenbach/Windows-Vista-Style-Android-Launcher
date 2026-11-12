@@ -33,4 +33,23 @@ public class StartUninstallMenuTest {
   assertTrue(list.getOnItemLongClickListener().onItemLongClick(list,row,at,at));popup().dismiss();assertTrue(list.performItemClick(row,at,at));assertEquals(ID,opened);assertTrue(row.performContextClick());PopupWindow popup=popup();find(popup.getContentView(),"Uninstall").performClick();assertDelete();
  }
 
+ @Test public void rowOwnsTapAndHoldAsWellAsListCallbacks(){
+  menu.entries(Collections.singletonList(new AppCatalog.Entry(ID,NAME,new ColorDrawable())));menu.show(false);
+  ListView list=ReflectionHelpers.getField(menu,"list");View row=list.getAdapter().getView(0,null,list);root.addView(row,new FrameLayout.LayoutParams(300,48));row.layout(0,0,300,48);
+  assertTrue(row.performClick());assertEquals(ID,opened);opened=null;
+  assertTrue(row.performLongClick());PopupWindow popup=popup();assertNull(opened);assertNotNull(find(popup.getContentView(),"Send To"));assertFalse(find(popup.getContentView(),"Run as administrator").isEnabled());popup.dismiss();
+ }
+ @Test public void cuttingStartPinToDesktopDoesNotRemoveExistingDesktopItems(){
+  store.desktop(Arrays.asList("@notes","@computer"));ExplorerClipboard.shortcuts(Collections.singletonList(ID),"start",true);ExplorerClipboard.paste(store,"desktop");assertFalse(store.startPins().contains(ID));assertEquals(Arrays.asList("@notes","@computer",ID),store.desktop());ExplorerClipboard.clear();
+ }
+
+ @Test public void deleteOnlyHidesStartShortcutAndKeepsAppAndDesktop(){
+  store.desktop(Collections.singletonList(ID));menu.entries(Collections.singletonList(new AppCatalog.Entry(ID,NAME,new ColorDrawable())));menu.show(false);ListView list=ReflectionHelpers.getField(menu,"list");View row=list.getAdapter().getView(0,null,list);root.addView(row,new FrameLayout.LayoutParams(300,48));row.layout(0,0,300,48);row.performLongClick();find(popup().getContentView(),"Delete").performClick();
+  android.app.AlertDialog confirm=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(confirm);assertTrue(store.startPins().contains(ID));confirm.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick();shadowOf(android.os.Looper.getMainLooper()).idle();
+  assertTrue(StartItemMenus.hidden(store,ID));assertFalse(store.startPins().contains(ID));assertTrue(store.desktop().contains(ID));assertTrue(AppUninstaller.available(activity,ID));assertNull(shadowOf(activity).getNextStartedActivityForResult());
+ }
+ @Test public void removedStartItemsAreValidatedAndIncludedInBackup()throws Exception{
+  store.prefs.edit().putString("start_deleted","[\""+ID+"\"]").putString("start_removed_recent","[\"@notes\"]").commit();DesktopBackup.Plan plan=DesktopBackup.parse(DesktopBackup.snapshot(store).toString());assertEquals("[\""+ID+"\"]",plan.values.get("start_deleted"));assertEquals("[\"@notes\"]",plan.values.get("start_removed_recent"));
+ }
+
 }

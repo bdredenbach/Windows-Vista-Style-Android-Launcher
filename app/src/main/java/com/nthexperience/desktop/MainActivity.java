@@ -457,6 +457,7 @@ public final class MainActivity extends Activity implements StartMenu.Actions,Ga
             Aero.dialog(this).setTitle("App unavailable").setMessage("This app may have been removed or disabled.").setPositiveButton("Remove shortcut",(d,w)->{List<String> ids=store.desktop();ids.remove(id);store.desktop(ids);renderDesktop();}).setNegativeButton("Keep",null).show();scanApps();
         }
     }
+    @Override public void shortcutsChanged(){desktopChanged();}
     @Override public void options(View anchor,String id){ContextMenus.centered(anchor,(x,y)->shortcutMenu(anchor,id,"desktop",x,y));}
     private void shortcutMenu(View anchor,String id,String source,float x,float y){
         if(id.equals("@recycle")&&source.equals("desktop")){

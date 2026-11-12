@@ -26,4 +26,5 @@
     <instrumentation android:name="com.nthexperience.desktop.ExtendedTaskbarSmoke" android:targetPackage="com.nthexperience.desktop" android:functionalTest="true" />
     <instrumentation android:name="com.nthexperience.desktop.VistaInitializationSmoke" android:targetPackage="com.nthexperience.desktop" android:functionalTest="true" />
     <instrumentation android:name="com.nthexperience.desktop.VistaTaskbarRowsSmoke" android:targetPackage="com.nthexperience.desktop"/>
+    <instrumentation android:name="com.nthexperience.desktop.StartMenuSmoke" android:targetPackage="com.nthexperience.desktop"/>
 </manifest>
