@@ -34,7 +34,7 @@ final class StartItemMenus {
             return menu;
         }
         if(program){
-            menu.item("Run as administrator","shield",false,()->{});
+            menu.item("Run as administrator","security",false,()->{});
             menu.item("Open file location","empty",false,()->{});
         }
         if(shortcut){
@@ -45,6 +45,7 @@ final class StartItemMenus {
             menu.item("Add to Quick Launch","empty",!store.quickLaunch().contains(id)&&store.quickLaunch().size()<DesktopStore.MAX_QUICK,()->{
                 List<String> quick=store.quickLaunch();quick.add(id);store.quickLaunch(quick);changed.run();
             });
+            menu.item("Restore previous versions","empty",false,()->{});
             if(landing&&!pinned)menu.item("Remove from this list","empty",()->{mark(store,"start_removed_recent",id);changed.run();});
             menu.separator();
             menu.submenu("Send To","empty",()->{
