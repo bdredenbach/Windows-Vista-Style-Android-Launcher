@@ -59,8 +59,8 @@ public final class StartMenuSmoke extends Instrumentation {
         try(InputStream in=new ParcelFileDescriptor.AutoCloseInputStream(getUiAutomation().executeShellCommand("am start -W -a android.intent.action.MAIN -n com.nthexperience.desktop/.MainActivity"))){byte[] bytes=new byte[1024];while(in.read(bytes)!=-1){}}
         await(()->uiValue(()->home.hasWindowFocus()),"Back to desktop");
     }
-    private void back(){getUiAutomation().injectInputEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_BACK),true);getUiAutomation().injectInputEvent(new KeyEvent(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_BACK),true);}
-    private void dismiss()throws Exception{back();waitForIdleSync();getUiAutomation().waitForIdle(150,2500);}
+    private void back(){long now=SystemClock.uptimeMillis();getUiAutomation().injectInputEvent(new KeyEvent(now,now,KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_BACK,0),true);getUiAutomation().injectInputEvent(new KeyEvent(now,SystemClock.uptimeMillis(),KeyEvent.ACTION_UP,KeyEvent.KEYCODE_BACK,0),true);}
+    private void dismiss()throws Exception{back();waitForIdleSync();await(()->!accessible("Vista Start item menu")&&!accessible("Vista Documents menu"),"Context menu dismissed");getUiAutomation().waitForIdle(150,2500);}
     private void tapProgram(String id,long hold)throws Exception{
         await(()->uiValue(()->{StartMenu menu=(StartMenu)findIn(root,v->v instanceof StartMenu);if(menu==null)return false;ListView list=(ListView)findIn(menu,v->v instanceof ListView);for(int i=0;i<list.getAdapter().getCount();i++)if(((StartSearch.Result)list.getAdapter().getItem(i)).id.equals(id)){list.setSelection(i);return true;}return false;}),"Program available: "+id);
         waitForIdleSync();await(()->program(id)!=null,"Program row ready: "+id);tap(program(id),hold);
