@@ -18,7 +18,7 @@ final class StartItemMenus {
         try{JSONArray array=new JSONArray(store.prefs.getString(key,"[]"));for(int i=0;i<array.length();i++)ids.add(array.getString(i));}catch(org.json.JSONException ignored){}
         return ids;
     }
-    private static void mark(DesktopStore store,String key,String id){List<String> ids=values(store,key);if(!ids.contains(id))ids.add(id);store.prefs.edit().putString(key,new JSONArray(ids).toString()).apply();}
+    private static void mark(DesktopStore store,String key,String id){List<String> ids=values(store,key);if(!ids.contains(id)){if(ids.size()==512)ids.remove(0);ids.add(id);}store.prefs.edit().putString(key,new JSONArray(ids).toString()).apply();}
     static DesktopContextMenu create(Context context,View anchor,DesktopStore store,StartSearch.Result item,
             boolean landing,Consumer<String> open,Runnable changed,Consumer<StartSearch.Result> activate){
         String id=item.id;

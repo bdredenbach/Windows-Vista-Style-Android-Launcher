@@ -53,8 +53,9 @@ public final class StartMenuSmoke extends Instrumentation {
         ListView list=(ListView)findIn(menu,v->v instanceof ListView);if(list==null)return null;
         for(int i=0;i<list.getChildCount();i++){int p=list.getFirstVisiblePosition()+i;StartSearch.Result item=(StartSearch.Result)list.getAdapter().getItem(p);if(item.id.equals(id))return list.getChildAt(i);}return null;
     });}
-    private void backHome()throws Exception{sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);await(()->uiValue(()->home.hasWindowFocus()),"Back to desktop");}
-    private void dismiss()throws Exception{sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);waitForIdleSync();}
+    private void backHome()throws Exception{for(int i=0;i<3;i++){back();Thread.sleep(250);if(uiValue(()->home.hasWindowFocus()))return;}await(()->uiValue(()->home.hasWindowFocus()),"Back to desktop");}
+    private void back(){getUiAutomation().injectInputEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_BACK),true);getUiAutomation().injectInputEvent(new KeyEvent(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_BACK),true);}
+    private void dismiss()throws Exception{back();waitForIdleSync();getUiAutomation().waitForIdle(150,2500);}
     private void tapProgram(String id,long hold)throws Exception{
         await(()->uiValue(()->{StartMenu menu=(StartMenu)findIn(root,v->v instanceof StartMenu);if(menu==null)return false;ListView list=(ListView)findIn(menu,v->v instanceof ListView);for(int i=0;i<list.getAdapter().getCount();i++)if(((StartSearch.Result)list.getAdapter().getItem(i)).id.equals(id)){list.setSelection(i);return true;}return false;}),"Program available: "+id);
         waitForIdleSync();await(()->program(id)!=null,"Program row ready: "+id);tap(program(id),hold);
